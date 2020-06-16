@@ -13,13 +13,13 @@ namespace HtmlAgilityPackProj
         public static readonly string KR = "kr/components";
         public static readonly string JP = "jp/components";
         public static readonly string EN = "en/components";
-        public static readonly string[] versions = { KR};
+        public static readonly string[] versions = { EN};
     }
     class Program
     {
 
-        static string path = "C:/IgniteUI/igniteui-docfx/";
-        static string xplatPath = "C:/IgniteUI/xplat-docfx/doc/";
+        static string path = "C:/IgniteUI/docfx/igniteui-docfx/";
+        static string xplatPath = "C:/IgniteUI/docfx/xplat-docfx/doc/";
         static Regex TopicHeadRegex = new Regex("---");
         static Regex DivRegex = new Regex("<\\s*div\\s*class=\"sample-container[^>]*>\\s*(.*?)\\s*<\\s*\\/\\s*div>", RegexOptions.Singleline);
         static Regex StylingSectionRegex = new Regex("^([#]{1,3}\\s*Styling)\\s\n", RegexOptions.Multiline);
@@ -157,9 +157,9 @@ namespace HtmlAgilityPackProj
             //|| fi.Name.Contains("bulletgraph")
             //|| fi.Name.Contains("excel_library") || fi.Name.Contains("exporter")
             //|| fi.Name.Contains("gauge)"
-            //.FindAll(fi => File.ReadAllText(fi.Directory.ToString() + "/" + fi.ToString()).Contains("sample-container"))
-            return result.FindAll(fi => File.ReadAllText(fi.Directory.ToString() + "/" + fi.ToString()).Contains("sample-container") && !fi.Name.Contains("map_") && !fi.Name.Contains("chart") && !fi.Name.Contains("graph")
-                && !fi.Name.Contains("gauge") && !fi.Name.Contains("spreadsheet") && !fi.Name.Contains("toc") && !fi.Name.Contains("excel_library") && !fi.Name.Contains("sparkline"));
+            return result.FindAll(fi => File.ReadAllText(fi.Directory.ToString() + "/" + fi.ToString()).Contains("sample-container"));
+        //    return result.FindAll(fi => File.ReadAllText(fi.Directory.ToString() + "/" + fi.ToString()).Contains("sample-container") && !fi.Name.Contains("map_") && !fi.Name.Contains("chart") && !fi.Name.Contains("graph")
+        //        && !fi.Name.Contains("gauge") && !fi.Name.Contains("spreadsheet") && !fi.Name.Contains("toc") && !fi.Name.Contains("excel_library") && !fi.Name.Contains("sparkline"));
         }
 
         public static List<FileInfo> GetAllXplatFiles()
@@ -522,11 +522,46 @@ namespace HtmlAgilityPackProj
 
         }
 
+        static void AddCBSButton(List<FileInfo> files)
+        {
+            foreach (FileInfo file in files)
+            {
+                ShouldBeReplaced = false;
+                string filePath = file.Directory.ToString() + "/" + file.ToString();
+                string fileContentManipulator = File.ReadAllText(filePath);
+                int fileContentLength = File.ReadAllText(filePath).Length;
+                int indexDiff = fileContentLength - fileContentManipulator.Length;
+                List<Match> IframesWithButtons = IframeAndButtonMatcher(file).ToList();
+                Console.WriteLine(file);
+                IframesWithButtons.ForEach(match =>
+                {
+                var button = GetButton(match);
+                var cbsButton = button.CloneNode(false);
+                cbsButton.Attributes.ToList().ForEach(attr => {
+                    if (attr.Value.IndexOf("stackblitz") != -1)
+                    {
+                        attr.Value = attr.Value.Replace("stackblitz", "codesandbox");
+                    }
+                });
+                cbsButton.InnerHtml = button.InnerText.Replace("stackblitz", "codesandbox", StringComparison.OrdinalIgnoreCase);
+                    var newItem = $"{button.OuterHtml}\n{cbsButton.OuterHtml}"; 
+                    indexDiff = fileContentLength - fileContentManipulator.Length;
+                    fileContentManipulator = StackBlitzButtonRegex.Replace(fileContentManipulator, newItem, 1, match.Index - indexDiff);
+                    ShouldBeReplaced = true;
+                });
+                if (ShouldBeReplaced)
+                {
+                    File.WriteAllText(filePath, fileContentManipulator.Replace("=\"\"", ""));
+
+                }
+            }
+        }
+
+
         static void Main(string[] args)
         {
-            List<FileInfo> files = GetAllXplatFiles();
-
-            XPlatChangeDemosUrl(files);
+            List<FileInfo> files = GetAllFiles();
+            AddCBSButton(files);
         }
     }
 }
