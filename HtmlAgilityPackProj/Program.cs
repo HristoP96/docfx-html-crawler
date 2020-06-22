@@ -28,6 +28,7 @@ namespace HtmlAgilityPackProj
             "<\\s*div\\s*class=\"sample-container[^>]*>" +
             "\\s*<\\s*iframe[^>]*>\\s*<\\s*\\/iframe\\s*>\\s*" +
             "<\\s*\\/\\s*div>\\s*" +
+            "\\s*(.*?)\\s*" + 
             "<\\s*div\\s*>\\s*" +
             "<\\s*button\\s*[^>]*class=\"stackblitz-btn\"[^>]*>" +
             "\\s*(.*?)\\s*" +
@@ -109,10 +110,10 @@ namespace HtmlAgilityPackProj
                 {
                     foreach (DirectoryInfo dir in GetDirectories(path + version))
                     {
-                        if (!dir.Name.Contains("grids_templates"))
-                        {
-                            continue;
-                        }
+                        //if (dir.Name.Contains("grids_templates"))
+                        //{
+                        //    continue;
+                        //}
                         //Console.ForegroundColor = ConsoleColor.Red;
                         //Console.WriteLine(dir);
                         //Console.ForegroundColor = ConsoleColor.White;
@@ -135,8 +136,7 @@ namespace HtmlAgilityPackProj
                 }
             }
 
-            return result.FindAll(fi => !fi.Name.Contains("map_") && !fi.Name.Contains("chart") && !fi.Name.Contains("graph")
-                && !fi.Name.Contains("gauge") && !fi.Name.Contains("spreadsheet") && !fi.Name.Contains("toc") && !fi.Name.Contains("excel_library"));
+            return result;
         }
         public static List<FileInfo> GetAllFiles()
         {
@@ -526,7 +526,7 @@ namespace HtmlAgilityPackProj
         {
             foreach (FileInfo file in files)
             {
-                ShouldBeReplaced = false;
+                var ShouldBeReplaced = false;
                 string filePath = file.Directory.ToString() + "/" + file.ToString();
                 string fileContentManipulator = File.ReadAllText(filePath);
                 int fileContentLength = File.ReadAllText(filePath).Length;
@@ -536,6 +536,10 @@ namespace HtmlAgilityPackProj
                 IframesWithButtons.ForEach(match =>
                 {
                 var button = GetButton(match);
+                    if(button.NextSibling != null)
+                    {
+                        return;
+                    }
                 var cbsButton = button.CloneNode(false);
                 cbsButton.Attributes.ToList().ForEach(attr => {
                     if (attr.Value.IndexOf("stackblitz") != -1)
@@ -560,7 +564,7 @@ namespace HtmlAgilityPackProj
 
         static void Main(string[] args)
         {
-            List<FileInfo> files = GetAllFiles();
+            List<FileInfo> files = GetAllFilesWithDirs();
             AddCBSButton(files);
         }
     }
